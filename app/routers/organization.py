@@ -3,23 +3,25 @@ from .. import schemas,models
 from sqlalchemy.orm import Session
 from ..database import get_db
 from typing import List
+from ..oauth2 import get_current_user
 
 router = APIRouter(prefix='/organizations',tags=['Organizations'])
 
-@router.get('/',status_code=status.HTTP_200_OK,response_class=List[schemas.OrganizationResponse])
-def get_organizations(db:Session=Depends(get_db)):
+
+@router.get('/',status_code=status.HTTP_200_OK,response_model=List[schemas.OrganizationResponse])
+def get_organizations(db:Session=Depends(get_db),current_user=Depends(get_current_user)):
     organizations = db.query(models.Organization).all()
     return organizations
 
 @router.get('/{id}',response_model=schemas.OrganizationResponse)
-def get_organization(id:int,db:Session=Depends(get_db)):
+def get_organization(id:int,db:Session=Depends(get_db),current_user=Depends(get_current_user)):
     organization = db.query(models.Organization).filter(models.Organization.id == id).first()
     if organization is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f'organization with id {id} not found')
     return organization
 
 @router.post('/',status_code=status.HTTP_201_CREATED,response_model=schemas.OrganizationResponse)
-def create_organization(organization:schemas.OrganizationCreate,db:Session=Depends(get_db)):
+def create_organization(organization:schemas.OrganizationCreate,db:Session=Depends(get_db),current_user=Depends(get_current_user)):
     organization_data = models.Organization(**organization.dict())
     db.add(organization_data)
     db.commit()
@@ -27,7 +29,7 @@ def create_organization(organization:schemas.OrganizationCreate,db:Session=Depen
     return organization_data
 
 @router.patch('/{id}',status_code=status.HTTP_202_ACCEPTED,response_model=schemas.OrganizationResponse)
-def update_organization(organization:schemas.OrganizationUpdate,db:Session=Depends(get_db)):
+def update_organization(organization:schemas.OrganizationUpdate,db:Session=Depends(get_db),current_user=Depends(get_current_user)):
     organization_db = db.query(models.Organization).filter(models.Organization.id == id)
     if organization_db.first() is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f'organization with id {id} not found')
@@ -38,7 +40,7 @@ def update_organization(organization:schemas.OrganizationUpdate,db:Session=Depen
 
 
 @router.put('/{id}',status_code=status.HTTP_202_ACCEPTED,response_model=schemas.OrganizationResponse)
-def update_organization(id:int,organization:schemas.OrganizationCreate,db:Session=Depends(get_db)):
+def update_organization(id:int,organization:schemas.OrganizationCreate,db:Session=Depends(get_db),current_user=Depends(get_current_user)):
     db_member = db.query(models.Organization).filter(models.Organization.id == id)
     if db_member.first() is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f'organization with id {id} not found')
@@ -48,7 +50,7 @@ def update_organization(id:int,organization:schemas.OrganizationCreate,db:Sessio
 
 
 @router.delete('/{id}',status_code=status.HTTP_204_NO_CONTENT)
-def delete_organization(id:int,db:Session=Depends(get_db)):
+def delete_organization(id:int,db:Session=Depends(get_db),current_user=Depends(get_current_user)):
     db_member = db.query(models.Organization).filter(models.Organization.id == id).first()
     if db_member is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f'organization with id {id} not found')
