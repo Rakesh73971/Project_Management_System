@@ -15,7 +15,8 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 class OrganizationMemberCreate(BaseModel):
-    oragnization_id : int
+    user_id : int
+    organization_id : int
     role : str
 
 class OrganizationMemberUpdate(BaseModel):
@@ -24,8 +25,6 @@ class OrganizationMemberUpdate(BaseModel):
 
 class OrganizationMemberResponse(OrganizationMemberCreate):
     id : int
-    user_id : int
-
     class Config:
         from_attributes = True
 
@@ -70,3 +69,25 @@ class ProjectResponse(ProjectCreate):
 class TokenData(BaseModel):
     id : Optional[int] = None
     
+
+class TaskCreate(BaseModel):
+    project_id : int
+    assigned_to : int
+    status : str
+    priority : str
+    description: str
+
+class TaskUpdate(BaseModel):
+    project_id : Optional[int] = None
+    assigned_to : Optional[int] = None
+    status : Optional[str] = None
+    priority: Optional[str] = None
+    description: Optional[str] = None
+
+class TaskResponse(TaskCreate):
+    id : int
+    createdAt : datetime
+    updatedAt : datetime
+
+    class Config:
+        from_attributes = True

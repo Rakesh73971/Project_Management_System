@@ -10,14 +10,6 @@ class User(Base):
     email = Column(String,unique=True,nullable=False)
     password = Column(String,nullable=False)
 
-class OrganizationMember(Base):
-    __tablename__ = "organization_members"
-
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    organization_id = Column(Integer, ForeignKey("organizations.id"))
-    role = Column(String, server_default="member")
-
 class Organization(Base):
     __tablename__="organizations"
 
@@ -27,6 +19,13 @@ class Organization(Base):
     description = Column(Text)
     createdAt = Column(TIMESTAMP(timezone=True),server_default=func.now(),nullable=False)
     updatedAt = Column(TIMESTAMP(timezone=True),server_default=func.now(),onupdate=func.now(),nullable=False)
+class OrganizationMember(Base):
+    __tablename__ = "organization_members"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    organization_id = Column(Integer, ForeignKey("organizations.id"))
+    role = Column(String, server_default="member")
 
 
 
