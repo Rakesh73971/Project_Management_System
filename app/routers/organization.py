@@ -34,3 +34,24 @@ def update_organization(organization:schemas.OrganizationUpdate,db:Session=Depen
     organization_db.update(organization.dict(exclude_unset=True),synchronize_session=False)
     db.commit()
     return organization_db.first()
+
+
+
+@router.put('/{id}',status_code=status.HTTP_202_ACCEPTED,response_model=schemas.OrganizationResponse)
+def update_organization(id:int,organization:schemas.OrganizationCreate,db:Session=Depends(get_db)):
+    db_member = db.query(models.Organization).filter(models.Organization.id == id)
+    if db_member.first() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f'organization with id {id} not found')
+    db_member.update(db_member.dict(),synchronize_session=False)
+    db.commit()
+    return db_member.first()
+
+
+@router.delete('/{id}',status_code=status.HTTP_204_NO_CONTENT)
+def delete_organization(id:int,db:Session=Depends(get_db)):
+    db_member = db.query(models.Organization).filter(models.Organization.id == id).first()
+    if db_member is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f'organization with id {id} not found')
+    db.delete(db_member)
+    db.commit()
+    return None

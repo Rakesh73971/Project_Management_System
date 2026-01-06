@@ -48,3 +48,25 @@ class OrganizationResponse(OrganizationCreate):
         from_attributes = True
 
 
+class ProjectCreate(BaseModel):
+    name : str
+    organizationId : int
+    status : str
+    description: str
+
+class ProjectUpdate(BaseModel):
+    name : Optional[str] = None
+    organizationId : Optional[int] = None
+    status : Optional[str] = None
+    description: Optional[str] = None
+class ProjectResponse(ProjectCreate):
+    id : int
+    createdAt : datetime
+    updatedAt : datetime
+
+    class Config:
+        from_attributes = True
+
+class TokenData(BaseModel):
+    id : Optional[int] = None
+    
