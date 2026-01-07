@@ -1,19 +1,46 @@
-from fastapi import APIRouter,status,HTTPException,Depends
+from fastapi import APIRouter,status,HTTPException,Depends,Query
+from sqlalchemy import asc,desc
 from sqlalchemy.orm import Session
 from .. import schemas,models
 from ..database import get_db
-from typing import List
+from typing import List,Optional
 from ..oauth2 import get_current_user
+import math
 
 router = APIRouter(
     prefix='/projects',
     tags=['Projects']
 )
 
-@router.get('/',status_code=status.HTTP_200_OK,response_model=List[schemas.ProjectResponse])
-def get_projects(db:Session=Depends(get_db),current_user=Depends(get_current_user)):
-    projects = db.query(models.Project).all()
-    return projects
+@router.get('/',status_code=status.HTTP_200_OK,response_model=schemas.ProjectPaginatedResponse)
+def get_projects(db:Session=Depends(get_db),current_user=Depends(get_current_user),limit:int=Query(10,ge=1,le=10),page:int=Query(1,ge=1),search:Optional[str]="",sort_by:str=Query('id'),order:str=Query('asc')):
+
+    sort_fields = {
+        'id':models.Project.id,
+        'name':models.Project.name,
+        'status':models.Project.status
+    }
+    query = db.query(models.Project).filter(models.Project.name.contains(search))
+
+    total = query.count()
+    total_pages = math.ceil(total/limit)
+    offset = (page-1) * limit
+
+    sort_column = sort_fields.get(sort_by,models.Project.id)
+
+    if order == 'desc':
+        query = query.order_by(desc(sort_column))
+    else:
+        query = query.order_by(asc(sort_column))
+
+    projects = query.limit(limit).offset(offset).all()
+
+    return {
+        'data':projects,
+        'total':total,
+        'page':page,
+        'totalPages':total_pages
+    }
 
 @router.get('/{id}',status_code=status.HTTP_200_OK,response_model=schemas.ProjectResponse)
 def get_project(id:int,db:Session=Depends(get_db),current_user=Depends(get_current_user)):

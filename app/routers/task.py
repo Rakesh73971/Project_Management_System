@@ -1,19 +1,46 @@
-from fastapi import HTTPException,status,Depends,APIRouter
+from fastapi import HTTPException,status,Depends,APIRouter,Query
+from sqlalchemy import asc,desc
 from sqlalchemy.orm import Session
 from .. import models,schemas
 from ..database import get_db
 from ..oauth2 import get_current_user
-from typing import List
+from typing import List,Optional
+import math
 
 router = APIRouter(
     prefix='/tasks',
     tags=['Tasks']
 )
 
-@router.get('/',status_code=status.HTTP_200_OK,response_model=List[schemas.TaskResponse])
-def get_tasks(db:Session=Depends(get_db),current_user=Depends(get_current_user)):
-    tasks = db.query(models.Task).all()
-    return tasks
+@router.get('/',status_code=status.HTTP_200_OK,response_model=schemas.TaskPaginatedResponse)
+def get_tasks(db:Session=Depends(get_db),current_user=Depends(get_current_user),limit:int=Query(10,ge=1,le=10),page:int=Query(1,ge=1),search:Optional[str]="",sort_by:str=Query('id'),order:str=Query('asc')):
+    sort_fields={
+        'id':models.Task.id,
+        'title':models.Task.title,
+        'status':models.Task.status,
+        'priority':models.Task.priority
+    }
+    query = db.query(models.Task).filter(models.Task.title.contains(search))
+
+    total = query.count()
+    total_pages = math.ceil(total/limit)
+    offset = (page-1) * limit
+
+    sort_column = sort_fields.get(sort_by,models.Task.id)
+
+    if order == 'desc':
+        query = query.order_by(desc(sort_column))
+    else:
+        query = query.order_by(asc(sort_column))
+    
+    tasks = query.limit(limit).offset(offset).all()
+
+    return{
+        'data':tasks,
+        'total':total,
+        'page':page,
+        'totalPages':total_pages
+    }
 
 @router.get('/{id}',status_code=status.HTTP_200_OK,response_model=schemas.TaskResponse)
 def get_tasks(id:int,db:Session=Depends(get_db),current_user=Depends(get_current_user)):

@@ -1,17 +1,44 @@
-from fastapi import APIRouter,status,HTTPException,Depends
+from fastapi import APIRouter,status,HTTPException,Depends,Query
 from .. import schemas,models
 from sqlalchemy.orm import Session
 from ..database import get_db
-from typing import List
+from typing import List,Optional
+from sqlalchemy import asc,desc
 from ..oauth2 import get_current_user
+import math
 
 router = APIRouter(prefix='/organizations',tags=['Organizations'])
 
 
-@router.get('/',status_code=status.HTTP_200_OK,response_model=List[schemas.OrganizationResponse])
-def get_organizations(db:Session=Depends(get_db),current_user=Depends(get_current_user)):
-    organizations = db.query(models.Organization).all()
-    return organizations
+@router.get('/',status_code=status.HTTP_200_OK,response_model=schemas.OrganizationPaginatedResponse)
+def get_organizations(db:Session=Depends(get_db),current_user=Depends(get_current_user),limit:int=Query(10,ge=1,le=10),page:int=Query(1,ge=1),search:Optional[str]="",sort_by:str=Query("id"),order:str=Query("asc")):
+    sort_feilds = {
+        'id':models.Organization.id,
+        'name':models.Organization.name,
+        'status':models.Organization.status
+    }
+
+    query = db.query(models.Organization).filter(models.Organization.name.contains(search))
+    total = query.count()
+    totalpages = math.ceil(total/limit)
+    offset = (page-1) * limit
+
+    sort_column = sort_feilds.get(sort_by,models.Organization.id)
+
+    if order == 'desc':
+        query = query.order_by(desc(sort_column))
+    else:
+        query = query.order_by(desc(sort_column))
+    
+    organizations = query.limit(limit).offset(offset).all()
+    
+    return {
+        'data':organizations,
+        'total':total,
+        'page':page,
+        'totalPages':totalpages
+    }
+    
 
 @router.get('/{id}',response_model=schemas.OrganizationResponse)
 def get_organization(id:int,db:Session=Depends(get_db),current_user=Depends(get_current_user)):
