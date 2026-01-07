@@ -1,5 +1,5 @@
 from pydantic import BaseModel,EmailStr
-from typing import Optional
+from typing import Optional,List
 from datetime import datetime
 class UserCreate(BaseModel):
     name: str
@@ -88,6 +88,30 @@ class TaskResponse(TaskCreate):
     id : int
     createdAt : datetime
     updatedAt : datetime
+
+    class Config:
+        from_attributes = True
+
+class OrganizationPaginatedResponse(BaseModel):
+    data : List[OrganizationResponse]
+    total : int
+    page : int
+    totalPages : int
+    class Config:
+        from_attributes = True
+class ProjectPaginatedResponse(BaseModel):
+    data : List[ProjectResponse]
+    total : int
+    page : int
+    totalPages : int
+
+    class Config:
+        from_attributes = True
+class TaskPaginatedResponse(BaseModel):
+    data : List[TaskResponse]
+    total : int
+    page : int
+    totalPages : int
 
     class Config:
         from_attributes = True
