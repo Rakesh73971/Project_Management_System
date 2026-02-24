@@ -1,6 +1,6 @@
 from app import schemas
 from app.config import settings
-import jwt
+from jose import jwt
 
 
 def test_create_user(client):

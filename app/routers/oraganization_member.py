@@ -51,12 +51,18 @@ def update_organization_member(id:int,member:schemas.OrganizationMemberUpdate,db
 
 @router.put('/{id}',status_code=status.HTTP_200_OK,response_model=schemas.OrganizationMemberResponse)
 def update_organization_member(id:int,member:schemas.OrganizationMemberCreate,db:Session=Depends(get_db),current_user=Depends(get_current_user)):
-    db_member = db.query(models.OrganizationMember).filter(models.OrganizationMember.id == id)
-    if db_member.first() is None:
+    db_member = db.query(models.OrganizationMember).filter(models.OrganizationMember.id == id).first()
+    if db_member is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f'organization memeber with id {id} not found')
-    db_member.update(member.dict(),synchronize_session=False)
+    
+    # Full update: overwrite all fields from the incoming payload
+    db_member.user_id = member.user_id
+    db_member.organization_id = member.organization_id
+    db_member.role = member.role
+
     db.commit()
-    return db_member.first()
+    db.refresh(db_member)
+    return db_member
 
 @router.delete('/{id}',status_code=status.HTTP_204_NO_CONTENT)
 def delete_organization_member(id:int,db:Session=Depends(get_db),current_user=Depends(get_current_user)):

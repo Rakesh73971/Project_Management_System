@@ -129,3 +129,19 @@ def test_members(test_user, test_user2, test_organization, session):
     session.commit()
 
     return session.query(models.OrganizationMember).all()
+
+
+@pytest.fixture
+def test_organizations(session):
+    orgs_data = [
+        {"name": "Org One", "status": "active", "description": "Org 1"},
+        {"name": "Org Two", "status": "inactive", "description": "Org 2"},
+        {"name": "Another Org", "status": "active", "description": "Org 3"},
+    ]
+
+    orgs = [models.Organization(**o) for o in orgs_data]
+    session.add_all(orgs)
+    session.commit()
+
+    return session.query(models.Organization).order_by(models.Organization.id.asc()).all()
+

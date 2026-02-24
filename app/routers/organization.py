@@ -28,7 +28,7 @@ def get_organizations(db:Session=Depends(get_db),current_user=Depends(get_curren
     if order == 'desc':
         query = query.order_by(desc(sort_column))
     else:
-        query = query.order_by(desc(sort_column))
+        query = query.order_by(asc(sort_column))
     
     organizations = query.limit(limit).offset(offset).all()
     
@@ -56,24 +56,39 @@ def create_organization(organization:schemas.OrganizationCreate,db:Session=Depen
     return organization_data
 
 @router.patch('/{id}',status_code=status.HTTP_202_ACCEPTED,response_model=schemas.OrganizationResponse)
-def update_organization(organization:schemas.OrganizationUpdate,db:Session=Depends(get_db),current_user=Depends(get_current_user)):
-    organization_db = db.query(models.Organization).filter(models.Organization.id == id)
-    if organization_db.first() is None:
+def patch_organization(id:int,organization:schemas.OrganizationUpdate,db:Session=Depends(get_db),current_user=Depends(get_current_user)):
+    db_org = db.query(models.Organization).filter(models.Organization.id == id).first()
+    if db_org is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f'organization with id {id} not found')
-    organization_db.update(organization.dict(exclude_unset=True),synchronize_session=False)
+    
+    update_data = organization.dict(exclude_unset=True)
+
+    if "name" in update_data:
+        db_org.name = update_data["name"]
+    if "status" in update_data:
+        db_org.status = update_data["status"]
+    if "description" in update_data:
+        db_org.description = update_data["description"]
+
     db.commit()
-    return organization_db.first()
+    db.refresh(db_org)
+    return db_org
 
 
 
-@router.put('/{id}',status_code=status.HTTP_202_ACCEPTED,response_model=schemas.OrganizationResponse)
-def update_organization(id:int,organization:schemas.OrganizationCreate,db:Session=Depends(get_db),current_user=Depends(get_current_user)):
-    db_member = db.query(models.Organization).filter(models.Organization.id == id)
-    if db_member.first() is None:
+@router.put('/{id}',status_code=status.HTTP_200_OK,response_model=schemas.OrganizationResponse)
+def put_organization(id:int,organization:schemas.OrganizationCreate,db:Session=Depends(get_db),current_user=Depends(get_current_user)):
+    db_org = db.query(models.Organization).filter(models.Organization.id == id).first()
+    if db_org is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f'organization with id {id} not found')
-    db_member.update(db_member.dict(),synchronize_session=False)
+    
+    db_org.name = organization.name
+    db_org.status = organization.status
+    db_org.description = organization.description
+
     db.commit()
-    return db_member.first()
+    db.refresh(db_org)
+    return db_org
 
 
 @router.delete('/{id}',status_code=status.HTTP_204_NO_CONTENT)
