@@ -45,8 +45,11 @@ def client(session):
 
 @pytest.fixture
 def test_user2(client):
-    user_data = {"email": "sanjeev123@gmail.com",
-                 "password": "password123"}
+    user_data = {
+        "name": "Sanjeev",
+        "email": "sanjeev123@gmail.com",
+        "password": "password123",
+    }
     res = client.post("/users/", json=user_data)
 
     assert res.status_code == 201
@@ -57,9 +60,12 @@ def test_user2(client):
 
 @pytest.fixture
 def test_user(client):
-    user_data = {'email':'rakesh@gmail.com',
-                'password':'password123'}
-    res = client.post('/users/',json=user_data)
+    user_data = {
+        "name": "Rakesh",
+        "email": "rakesh@gmail.com",
+        "password": "password123",
+    }
+    res = client.post("/users/", json=user_data)
     assert res.status_code == 201
     print(res.json())
     new_user = res.json()
@@ -94,3 +100,32 @@ def test_posts(test_user, test_user2, session):
     session.commit()
 
     return session.query(models.Post).all()
+
+
+
+
+@pytest.fixture
+def test_organization(session):
+    org = models.Organization(
+        name="Fixture Org",
+        status="active",
+        description="Org from fixture",
+    )
+    session.add(org)
+    session.commit()
+    session.refresh(org)
+    return org
+
+
+@pytest.fixture
+def test_members(test_user, test_user2, test_organization, session):
+    members_data = [
+        {"user_id": test_user["id"], "organization_id": test_organization.id, "role": "member"},
+        {"user_id": test_user2["id"], "organization_id": test_organization.id, "role": "admin"},
+    ]
+
+    members = [models.OrganizationMember(**m) for m in members_data]
+    session.add_all(members)
+    session.commit()
+
+    return session.query(models.OrganizationMember).all()
