@@ -1,8 +1,8 @@
 from app import schemas
 
 
-def test_unauthorized_get_organizations(client, test_organizations):
-    res = client.get("/organizations/")
+def test_unauthorized_get_organization(client,test_organizations):
+    res =client.get('/organizations')
     assert res.status_code == 401
 
 
@@ -41,7 +41,6 @@ def test_search_organizations(authorized_client, test_organizations):
     assert payload.total == 1
     assert len(payload.data) == 1
     assert "Another" in payload.data[0].name
-
 
 def test_get_organization_by_id(authorized_client, test_organizations):
     org_id = test_organizations[0].id
