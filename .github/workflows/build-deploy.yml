@@ -6,7 +6,6 @@ jobs:
 job1:
 runs-on: ubuntu-latest
 
-```
 environment:
   name: testing
 
@@ -57,4 +56,4 @@ steps:
     run: |
       pip install pytest httpx
       python -m pytest
-```
+
