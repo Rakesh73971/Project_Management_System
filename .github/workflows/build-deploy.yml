@@ -4,41 +4,39 @@ on: [push, pull_request]
 
 jobs:
   job1:
-    runs-on: ubuntu-latest
-
     environment:
       name: testing
-
     env:
-      DATABASE_HOSTNAME: postgres
-      DATABASE_PORT: 5432
-      DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
-      DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
-      DATABASE_USERNAME: ${{ secrets.DATABASE_USERNAME }}
-      SECRET_KEY: ${{ secrets.SECRET_KEY }}
-      ALGORITHM: ${{ secrets.ALGORITHM }}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
-
+      DATABASE_HOSTNAME: ${{ secrets.DATABASE_HOSTNAME}}
+      DATABASE_PORT: ${{secrets.DATABASE_PORT }}
+      DATABASE_PASSWORD: ${{secrets.DATABASE_PASSWORD}}
+      DATABASE_NAME: ${{secrets.DATABASE_NAME}}
+      DATABASE_USERNAME: ${{secrets.DATABASE_USERNAME}}
+      SECRET_KEY: ${{secrets.SECRET_KEY}}
+      ALGORITHM: ${{secrets.ALGORITHM}}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${{secrets.ACCESS_TOKEN_EXPIRE_MINUTES}}
+    
     services:
       postgres:
-        image: postgres:15
+        image: postgres
         env:
-          POSTGRES_USER: ${{ secrets.DATABASE_USERNAME }}
-          POSTGRES_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
-          POSTGRES_DB: ${{ secrets.DATABASE_NAME }}
+          POSTGRES_PASSWORD: ${{secrets.DATABASE_PASSWORD}} 
+          POSTGRES_DB: ${{secrets.DATABASE_NAME}}_test
         ports:
-          - 5432:5432
+        - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U ${{ secrets.DATABASE_USERNAME }}"
+          --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
 
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+    runs-on: ubuntu-latest
 
-      - name: Setup Python
+    steps:
+      - name: Pulling git repo
+        uses: actions/checkout@v2
+
+      - name: Install Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.12"
@@ -49,10 +47,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Wait for PostgreSQL
-        run: sleep 10
-
-      - name: Run Tests
+      - name: test with pytest
         run: |
-          pip install pytest httpx
-          python -m pytest
+          pip install pytest
+          pytest
+
