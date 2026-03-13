@@ -15,12 +15,14 @@ jobs:
       SECRET_KEY: ${{secrets.SECRET_KEY}}
       ALGORITHM: ${{secrets.ALGORITHM}}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${{secrets.ACCESS_TOKEN_EXPIRE_MINUTES}}
+      GEMINI_API_KEY: "dummy_testing_key_123" # <--- ADDED THIS LINE
     
     services:
       postgres:
         image: postgres
         env:
           POSTGRES_PASSWORD: ${{secrets.DATABASE_PASSWORD}} 
+          # Note: Your DB is named with a _test suffix here
           POSTGRES_DB: ${{secrets.DATABASE_NAME}}_test
         ports:
         - 5432:5432
@@ -34,7 +36,7 @@ jobs:
 
     steps:
       - name: Pulling git repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4 # <--- Updated to v4 to prevent deprecation warnings
 
       - name: Install Python
         uses: actions/setup-python@v4
@@ -51,4 +53,3 @@ jobs:
         run: |
           pip install pytest
           pytest
-
