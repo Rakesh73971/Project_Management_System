@@ -71,6 +71,7 @@ class TokenData(BaseModel):
     
 
 class TaskCreate(BaseModel):
+    title : str
     project_id : int
     assigned_to : int
     status : str
@@ -78,6 +79,7 @@ class TaskCreate(BaseModel):
     description: str
 
 class TaskUpdate(BaseModel):
+    title : Optional[str] = None
     project_id : Optional[int] = None
     assigned_to : Optional[int] = None
     status : Optional[str] = None
