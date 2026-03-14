@@ -9,6 +9,8 @@ class User(Base):
     name = Column(String,nullable=False)
     email = Column(String,unique=True,nullable=False)
     password = Column(String,nullable=False)
+    designation = Column(String, nullable=True) 
+    tech_stack = Column(String, nullable=True)
 
 class Organization(Base):
     __tablename__="organizations"
