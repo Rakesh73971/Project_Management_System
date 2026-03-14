@@ -30,20 +30,29 @@ def get_tasks(
         'status': models.Task.status,
         'priority': models.Task.priority
     }
+    # get organization where user is admin
+    member = db.query(models.OrganizationMember).filter(
+        models.OrganizationMember.user_id == current_user.id
+    ).first()
 
-    # organizations where the user is admin
-    admin_orgs = db.query(models.OrganizationMember.organization_id).filter(
-        models.OrganizationMember.user_id == current_user.id,
-        models.OrganizationMember.role == "admin"
-    ).subquery()
+    if not member:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins are allowed"
+        )
 
+    # admin constraint
+    get_current_admin(
+        user_id=current_user.id,
+        organization_id=member.organization_id,
+        db=db
+    )
     query = db.query(models.Task).join(
         models.Project, models.Task.project_id == models.Project.id
     ).filter(
-        models.Project.organizationId.in_(admin_orgs),
+        models.Project.organizationId == member.organization_id,
         models.Task.title.contains(search)
     )
-
     total = query.count()
     total_pages = math.ceil(total / limit)
     offset = (page - 1) * limit
@@ -56,7 +65,6 @@ def get_tasks(
         query = query.order_by(asc(sort_column))
 
     tasks = query.limit(limit).offset(offset).all()
-
     return {
         "data": tasks,
         "total": total,
@@ -87,27 +95,40 @@ def create_task(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
+
+    # Check project
     project = db.query(models.Project).filter(
         models.Project.id == task.project_id
     ).first()
 
-    if project is None:
+    if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
+
+    # Admin constraint (will raise 403 if not admin)
     get_current_admin(
         user_id=current_user.id,
         organization_id=project.organizationId,
         db=db
     )
-    task_data = models.Task(**task.dict())
 
-    db.add(task_data)
+    # Create task
+    new_task = models.Task(
+        title=task.title,
+        description=task.description,
+        priority=task.priority,
+        status=task.status,
+        project_id=task.project_id,
+        assigned_to=task.assigned_to
+    )
+
+    db.add(new_task)
     db.commit()
-    db.refresh(task_data)
+    db.refresh(new_task)
 
-    return task_data
+    return new_task
 
 @router.put('/{id}', status_code=status.HTTP_202_ACCEPTED, response_model=schemas.TaskResponse)
 def update_task(
