@@ -1,10 +1,11 @@
 
 # 📌 Project Management API
 
-A **RESTful backend API for managing organizations, projects, and tasks**.
-This system allows users to create organizations, manage members, create projects, and track tasks within those projects.
+A **RESTful backend API for managing organizations, projects, and tasks** built with **FastAPI**.
 
-The API includes **JWT authentication, pagination, searching, sorting, and filtering** to simulate real-world backend development practices.
+The system allows teams to create organizations, manage members, create projects, and track tasks efficiently. It also integrates **AI-based task management**, where tasks are analyzed and **automatically assigned to employees based on their skill sets**.
+
+The API implements **JWT authentication, role-based access control, pagination, searching, sorting, and filtering**, reflecting real-world backend system architecture.
 
 ---
 
@@ -13,13 +14,36 @@ The API includes **JWT authentication, pagination, searching, sorting, and filte
 * 🔐 **JWT Authentication**
 * 👤 **User Management**
 * 🏢 **Organization Management**
-* 👥 **Organization Member Roles**
+* 👥 **Role-Based Access Control (Admin / Member)**
 * 📂 **Project Management**
 * ✅ **Task Management**
-* 🔎 **Search functionality**
+* 🤖 **AI-Based Task Assignment**
+* 📊 **Project Analysis for Smart Task Distribution**
+* 🔎 **Search Functionality**
 * 📊 **Pagination & Limit**
 * ↕️ **Sorting**
 * 🧩 **RESTful API Design**
+* ⚠️ **Admin Authorization for Critical Operations**
+
+---
+
+# 🤖 AI-Based Task Management
+
+The system includes an **AI-powered task assignment module** that improves team productivity.
+
+### How it works
+
+1️⃣ Admin creates a task
+2️⃣ The system analyzes **task requirements**
+3️⃣ It checks **team members’ skill sets (`tech_stack`)**
+4️⃣ The task is **automatically assigned to the most suitable employee**
+
+### Benefits
+
+* Better task distribution
+* Efficient use of team skills
+* Reduced manual task allocation
+* Improved project productivity
 
 ---
 
@@ -39,20 +63,22 @@ The API includes **JWT authentication, pagination, searching, sorting, and filte
 
 ## User
 
-Stores application users.
+Stores application users and their technical skills.
 
-| Field    | Type            |
-| -------- | --------------- |
-| id       | Integer         |
-| name     | String          |
-| email    | String (Unique) |
-| password | String          |
+| Field       | Type            |
+| ----------- | --------------- |
+| id          | Integer         |
+| name        | String          |
+| email       | String (Unique) |
+| password    | String          |
+| designation | String          |
+| tech_stack  | String          |
 
 ---
 
 ## Organization
 
-Represents a company/team.
+Represents a company or team.
 
 | Field       | Type      |
 | ----------- | --------- |
@@ -67,14 +93,14 @@ Represents a company/team.
 
 ## OrganizationMember
 
-Defines which users belong to an organization.
+Defines which users belong to an organization and their role.
 
 | Field           | Type                          |
 | --------------- | ----------------------------- |
 | id              | Integer                       |
 | user_id         | ForeignKey (users.id)         |
 | organization_id | ForeignKey (organizations.id) |
-| role            | String                        |
+| role            | String (admin / member)       |
 
 ---
 
@@ -96,7 +122,7 @@ Projects created under organizations.
 
 ## Task
 
-Tasks belonging to projects.
+Tasks belonging to projects and assigned to team members.
 
 | Field       | Type                     |
 | ----------- | ------------------------ |
@@ -116,15 +142,35 @@ Tasks belonging to projects.
 
 The API uses **JWT (JSON Web Token)** authentication.
 
-Steps:
+### Steps
 
 1️⃣ Register a user
-2️⃣ Login to get a **JWT access token**
-3️⃣ Use the token in request headers
+2️⃣ Login to receive a **JWT access token**
+3️⃣ Send the token in request headers
 
 ```
 Authorization: Bearer <your_token>
 ```
+
+---
+
+# 🛡️ Authorization
+
+The system implements **Role-Based Access Control (RBAC)**.
+
+### Admin Permissions
+
+* Create projects
+* Create tasks
+* Delete tasks
+* Manage organization members
+
+### Member Permissions
+
+* View projects
+* View assigned tasks
+
+Admin validation is handled through a **custom dependency (`get_current_admin`)**.
 
 ---
 
@@ -152,31 +198,10 @@ GET /projects?search=inventory
 
 ### Sorting
 
+Sort API responses.
+
 ```
 GET /tasks?sort_by=createdAt&order=desc
-```
-
----
-
-# 📁 Project Structure
-
-```
-project-management-api
-│
-├── app
-│   ├── database.py
-│   ├── models.py
-│   ├── schemas.py
-│   ├── oauth2.py
-│   ├── routers
-│   │     ├── users.py
-│   │     ├── organizations.py
-│   │     ├── projects.py
-│   │     └── tasks.py
-│   └── main.py
-│
-├── requirements.txt
-└── README.md
 ```
 
 ---
@@ -191,7 +216,15 @@ git clone https://github.com/your-username/project-management-api.git
 
 ---
 
-### 2️⃣ Create virtual environment
+### 2️⃣ Navigate to project folder
+
+```bash
+cd project-management-api
+```
+
+---
+
+### 3️⃣ Create virtual environment
 
 ```bash
 python -m venv venv
@@ -199,13 +232,21 @@ python -m venv venv
 
 Activate it:
 
+Windows
+
 ```
 venv\Scripts\activate
 ```
 
+Linux / Mac
+
+```
+source venv/bin/activate
+```
+
 ---
 
-### 3️⃣ Install dependencies
+### 4️⃣ Install dependencies
 
 ```bash
 pip install -r requirements.txt
@@ -213,7 +254,7 @@ pip install -r requirements.txt
 
 ---
 
-### 4️⃣ Run the server
+### 5️⃣ Run the server
 
 ```bash
 uvicorn app.main:app --reload
@@ -223,30 +264,10 @@ uvicorn app.main:app --reload
 
 # 📬 API Documentation
 
-FastAPI automatically generates documentation.
+FastAPI automatically generates interactive API documentation.
 
-Swagger UI:
+### Swagger UI
 
 ```
 http://127.0.0.1:8000/docs
 ```
-
----
-
-# 📈 Future Improvements
-
-* Role-based access control
-* Task comments
-* File attachments
-* Activity logs
-* Notifications
-* Docker deployment
-
----
-
-# 👨‍💻 Author
-
-**Rakesh N**
-
-Backend Developer
-Skilled in **Python, FastAPI, Django, SQLAlchemy**
