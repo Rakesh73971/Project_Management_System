@@ -64,12 +64,10 @@ async def auto_plan_project(
     request: schemas.AIPlannerRequest, 
     db: Session = Depends(get_db)
 ):
-    # 1. Get the project
     project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # 2. NEW: Fetch users belonging to this project's organization
     org_members = db.query(models.User).join(
         models.OrganizationMember, 
         models.User.id == models.OrganizationMember.user_id
@@ -80,16 +78,20 @@ async def auto_plan_project(
     if not org_members:
         raise HTTPException(status_code=400, detail="No users found in this organization to assign tasks to.")
 
-    # Format the users into a readable string for the AI (e.g., "ID: 1, Name: Alice")
-    users_context = "\n".join([f"ID: {user.id}, Name: {user.name}" for user in org_members])
+    # --- FIX 2: GIVE THE AI THE TECH STACKS ---
+    users_context = "\n".join([
+        f"ID: {user.id} | Name: {user.name} | Role: {user.designation} | Skills: {user.tech_stack}" 
+        for user in org_members
+    ])
 
-    # 3. Call the AI with the user context
     generated_tasks = await generate_project_tasks(request.prompt, users_context)
     
+    # Print the clean JSON to the terminal to ensure Gemini gave us data
+    print("\n--- PARSED GEMINI DATA ---\n", generated_tasks, "\n--------------------------\n")
+    
     if not generated_tasks:
-        raise HTTPException(status_code=503, detail="Failed to generate tasks.")
+        raise HTTPException(status_code=503, detail="Failed to generate tasks. Check server logs.")
 
-    # 4. Save to database
     new_db_tasks = []
     for task_data in generated_tasks:
         try:
@@ -101,12 +103,16 @@ async def auto_plan_project(
                 priority=validated_task.priority,
                 status="planned",
                 project_id=project_id,
-                assigned_to=validated_task.assigned_to # NEW: Save the AI's assigned user!
+                assigned_to=validated_task.assigned_to 
             )
             new_db_tasks.append(new_task)
             
         except Exception as e:
-            print(f"Skipping invalid task: {e}")
+            # --- FIX 3: PRINT THE EXACT VALIDATION ERROR ---
+            print(f"\n[!] SKIPPED A TASK. REASON: {e}\n[!] TASK DATA WAS: {task_data}\n")
+
+    if not new_db_tasks:
+         raise HTTPException(status_code=500, detail="AI generated data, but it failed Pydantic validation. Check server logs.")
 
     db.add_all(new_db_tasks)
     db.commit()
@@ -122,12 +128,12 @@ async def smart_create_task(
     request: schemas.TaskCreateRequest, 
     db: Session = Depends(get_db)
 ):
-    # 1. Verify Project Exists
+    # 1. Verify Project
     project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # 2. Fetch all users in this Project's Organization
+    # 2. Fetch Organization Members
     org_members = db.query(models.User).join(
         models.OrganizationMember, 
         models.User.id == models.OrganizationMember.user_id
@@ -138,38 +144,45 @@ async def smart_create_task(
     if not org_members:
         raise HTTPException(status_code=400, detail="No users available in this organization.")
 
-    # 3. Format the Users' skills for the AI Prompt
+    # Get valid IDs for verification later
+    valid_user_ids = [u.id for u in org_members]
+
+    # 3. Format context
     users_context = "\n".join([
         f"ID: {u.id} | Name: {u.name} | Role: {u.designation} | Skills: {u.tech_stack}" 
         for u in org_members
     ])
 
-    # 4. Ask Gemini to assign the task
+    # 4. AI Decision
     ai_decision = await assign_task_with_ai(request.title, request.description, users_context)
     
-    if not ai_decision:
-        raise HTTPException(status_code=503, detail="AI Routing failed. Try again.")
+    if not ai_decision or "assigned_to" not in ai_decision:
+        raise HTTPException(status_code=503, detail="AI Routing failed to provide a valid assignment.")
 
-    # 5. Create the Task in the database with the AI's chosen user ID
+    # 5. Safety Check: Did AI pick a valid member?
+    chosen_id = ai_decision.get("assigned_to")
+    if chosen_id not in valid_user_ids:
+        chosen_id = None 
+
+    # 6. Create Task
     new_task = models.Task(
         title=request.title,
         description=request.description,
         priority=request.priority,
         project_id=project_id,
         status="planned",
-        assigned_to=ai_decision.get("assigned_to") # <--- Automatically Assigned!
+        assigned_to=chosen_id
     )
     
     db.add(new_task)
     db.commit()
     db.refresh(new_task)
 
-    # 6. Return the created task PLUS the AI's reasoning
     return {
         "message": "Task created and smartly routed.",
         "task": new_task,
         "ai_insight": {
-            "assigned_user_id": ai_decision.get("assigned_to"),
-            "routing_reason": ai_decision.get("reason")
+            "assigned_user_id": chosen_id,
+            "routing_reason": ai_decision.get("reason", "No reason provided by AI.")
         }
     }

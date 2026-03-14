@@ -77,7 +77,7 @@ class TokenData(BaseModel):
 class TaskCreate(BaseModel):
     title : str
     project_id : int
-    assigned_to : int
+    assigned_to : Optional[int] = None
     status : str
     priority : str
     description: str
@@ -126,7 +126,8 @@ class AIGeneratedTask(BaseModel):
     title: str = Field(..., description="A short, clear title for the task")
     description: str = Field(..., description="Detailed explanation of what needs to be done")
     priority: str = Field(..., description="Must be 'low', 'medium', or 'high'")
-
+    reasoning: str = Field(..., description="Explain why this user is the best fit.")
+    assigned_to: Optional[int] = Field(None)
 
 class AIPlannerRequest(BaseModel):
     prompt: str = Field(..., example="We need to build a Stripe checkout page with webhooks.")

@@ -40,33 +40,48 @@ async def generate_project_tasks(project_prompt: str, available_users: str):
     
     Break this down into 3 to 6 actionable tasks.
     
-    AVAILABLE TEAM MEMBERS:
+    AVAILABLE TEAM MEMBERS & SKILLS:
     {available_users}
     
     RULES:
-    1. Respond STRICTLY with a valid JSON array of objects.
-    2. Distribute the workload evenly among the available team members.
-    3. Each object MUST have these exact keys: 
+    1. Respond STRICTLY with a valid JSON array of objects. Do NOT use markdown code blocks.
+    2. INTELLIGENT ROUTING: Assign each task to the team member whose Role and Skills best match the technical requirements of the task.
+    3. Each task must have EXACTLY ONE owner.
+    4. Each object MUST have these exact keys: 
        - "title" (string)
        - "description" (string)
        - "priority" ("low", "medium", or "high")
-       - "assigned_to" (integer - MUST be one of the IDs from the team members list above).
-    """
+       # ---> ADD THIS NEW RULE BELOW <---
+       - "reasoning" (string - briefly explain why this user's tech stack is a match BEFORE giving the ID).
+       - "assigned_to" (integer - MUST be one of the IDs from the team members list above). """
     
     try:
         response = await model.generate_content_async(
             prompt,
             generation_config={"response_mime_type": "application/json"}
         )
-        return json.loads(response.text.strip())
+        
+        # --- FIX 1: THE MARKDOWN STRIPPER ---
+        raw_text = response.text.strip()
+        if raw_text.startswith("```json"):
+            raw_text = raw_text[7:]
+        if raw_text.startswith("```"):
+             raw_text = raw_text[3:]
+        if raw_text.endswith("```"):
+            raw_text = raw_text[:-3]
+            
+        return json.loads(raw_text.strip())
+        
+    except json.JSONDecodeError as e:
+        # Print the exact text so we can see why it failed parsing
+        print(f"\n--- AI JSON ERROR ---\n{response.text}\n---------------------\n")
+        logging.error(f"AI returned invalid JSON: {e}")
+        return None
     except Exception as e:
         logging.error(f"AI generation failed: {str(e)}")
         return None
     
 async def assign_task_with_ai(task_title: str, task_desc: str, users_context: str):
-    """
-    Asks Gemini to match a task to the best user based on their skills.
-    """
     prompt = f"""
     You are an intelligent Engineering Manager routing tasks to the best team member.
     
@@ -78,11 +93,11 @@ async def assign_task_with_ai(task_title: str, task_desc: str, users_context: st
     {users_context}
     
     RULES:
-    1. Analyze the task and match it to the team member whose "Role" and "Skills" best fit the technical requirements.
-    2. Respond STRICTLY with a valid JSON object.
-    3. The JSON MUST contain exactly two keys:
-       - "assigned_to": (integer) The exact ID of the chosen team member.
-       - "reason": (string) A short 1-sentence explanation of why they were chosen based on their tech stack.
+    1. Analyze the task and match it to the team member whose "Role" and "Skills" best fit.
+    2. Respond STRICTLY with a valid JSON object. No markdown code blocks.
+    3. The JSON MUST contain exactly:
+       - "assigned_to": (integer) The ID of the chosen member.
+       - "reason": (string) A 1-sentence explanation of why they match.
     """
     
     try:
@@ -90,7 +105,17 @@ async def assign_task_with_ai(task_title: str, task_desc: str, users_context: st
             prompt,
             generation_config={"response_mime_type": "application/json"}
         )
-        return json.loads(response.text.strip())
+        
+        # Clean markdown if present
+        raw_text = response.text.strip()
+        if raw_text.startswith("```"):
+            raw_text = raw_text.strip("```").replace("json", "", 1).strip()
+        
+        data = json.loads(raw_text)
+        
+        # Optional: Validate with Pydantic here if you have a schema defined
+        return data
+        
     except Exception as e:
         logging.error(f"AI task routing failed: {str(e)}")
         return None
