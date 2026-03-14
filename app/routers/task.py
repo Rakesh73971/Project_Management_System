@@ -31,13 +31,12 @@ def get_tasks(
         'priority': models.Task.priority
     }
 
-    
+    # organizations where the user is admin
     admin_orgs = db.query(models.OrganizationMember.organization_id).filter(
         models.OrganizationMember.user_id == current_user.id,
         models.OrganizationMember.role == "admin"
     ).subquery()
 
-    
     query = db.query(models.Task).join(
         models.Project, models.Task.project_id == models.Project.id
     ).filter(
@@ -59,10 +58,10 @@ def get_tasks(
     tasks = query.limit(limit).offset(offset).all()
 
     return {
-        'data': tasks,
-        'total': total,
-        'page': page,
-        'totalPages': total_pages
+        "data": tasks,
+        "total": total,
+        "page": page,
+        "totalPages": total_pages
     }
 
 @router.get('/{id}',status_code=status.HTTP_200_OK,response_model=schemas.TaskResponse)
@@ -82,15 +81,12 @@ def get_tasks(id:int,db:Session=Depends(get_db),current_user=Depends(get_current
     )
     return task
 
-
-
 @router.post('/', status_code=status.HTTP_201_CREATED, response_model=schemas.TaskResponse)
 def create_task(
     task: schemas.TaskCreate,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-
     project = db.query(models.Project).filter(
         models.Project.id == task.project_id
     ).first()
@@ -100,19 +96,11 @@ def create_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
-
-    member = db.query(models.OrganizationMember).filter(
-        models.OrganizationMember.user_id == current_user.id,
-        models.OrganizationMember.organization_id == project.organizationId,
-        models.OrganizationMember.role == "admin"
-    ).first()
-
-    if not member:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization admins can create tasks"
-        )
-
+    get_current_admin(
+        user_id=current_user.id,
+        organization_id=project.organizationId,
+        db=db
+    )
     task_data = models.Task(**task.dict())
 
     db.add(task_data)
@@ -128,6 +116,7 @@ def update_task(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
+
     db_task = db.query(models.Task).filter(models.Task.id == id).first()
 
     if db_task is None:
@@ -135,21 +124,17 @@ def update_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'task with id {id} not found'
         )
+
     project = db.query(models.Project).filter(
         models.Project.id == db_task.project_id
     ).first()
-    
-    member = db.query(models.OrganizationMember).filter(
-        models.OrganizationMember.user_id == current_user.id,
-        models.OrganizationMember.organization_id == project.organizationId,
-        models.OrganizationMember.role == "admin"
-    ).first()
 
-    if not member:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization admins can update tasks"
-        )
+    get_current_admin(
+        user_id=current_user.id,
+        organization_id=project.organizationId,
+        db=db
+    )
+
     db.query(models.Task).filter(models.Task.id == id).update(
         task.dict(),
         synchronize_session=False
@@ -177,27 +162,17 @@ def update_task(
     project = db.query(models.Project).filter(
         models.Project.id == db_task.project_id
     ).first()
-
     
-    member = db.query(models.OrganizationMember).filter(
-        models.OrganizationMember.user_id == current_user.id,
-        models.OrganizationMember.organization_id == project.organizationId,
-        models.OrganizationMember.role == "admin"
-    ).first()
-
-    if not member:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization admins can update tasks"
-        )
-
+    get_current_admin(
+        user_id=current_user.id,
+        organization_id=project.organizationId,
+        db=db
+    )
     db.query(models.Task).filter(models.Task.id == id).update(
         task.dict(exclude_unset=True),
         synchronize_session=False
     )
-
     db.commit()
-
     return db.query(models.Task).filter(models.Task.id == id).first()
 
 @router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
@@ -206,7 +181,6 @@ def delete_task(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-
     db_task = db.query(models.Task).filter(models.Task.id == id).first()
 
     if db_task is None:
@@ -214,22 +188,16 @@ def delete_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'task with id {id} not found'
         )
-
+    
     project = db.query(models.Project).filter(
         models.Project.id == db_task.project_id
     ).first()
 
-    member = db.query(models.OrganizationMember).filter(
-        models.OrganizationMember.user_id == current_user.id,
-        models.OrganizationMember.organization_id == project.organizationId,
-        models.OrganizationMember.role == "admin"
-    ).first()
-
-    if not member:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization admins can delete tasks"
-        )
+    get_current_admin(
+        user_id=current_user.id,
+        organization_id=project.organizationId,
+        db=db
+    )
 
     db.delete(db_task)
     db.commit()
