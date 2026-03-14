@@ -1,15 +1,19 @@
-from pydantic import BaseModel,EmailStr
+from pydantic import BaseModel,EmailStr, Field
 from typing import Optional,List
 from datetime import datetime
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
+    designation: str
+    tech_stack: str
 
 class UserResponse(BaseModel):
     id: int
     name: str
     email: str
+    designation: str
+    tech_stack: str
 
     class Config:
         from_attributes = True
@@ -117,3 +121,22 @@ class TaskPaginatedResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class AIGeneratedTask(BaseModel):
+    title: str = Field(..., description="A short, clear title for the task")
+    description: str = Field(..., description="Detailed explanation of what needs to be done")
+    priority: str = Field(..., description="Must be 'low', 'medium', or 'high'")
+
+
+class AIPlannerRequest(BaseModel):
+    prompt: str = Field(..., example="We need to build a Stripe checkout page with webhooks.")
+
+class TaskCreateRequest(BaseModel):
+    title: str = Field(..., example="Create Postgres Database Tables")
+    description: str = Field(..., example="Write SQLAlchemy models for User and Projects and run Alembic migrations.")
+    priority: str = Field(default="medium", example="high")
+
+# What we force the AI to return
+class AIAssignmentResponse(BaseModel):
+    assigned_to: int
+    reason: str
