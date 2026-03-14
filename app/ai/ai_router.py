@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException,status
 from sqlalchemy.orm import Session
-
 from app.database import get_db
 from app import models,schemas
 from app.dependencies import get_current_admin
 from ..oauth2 import get_current_user
 from .ai_service import generate_project_summary,generate_project_tasks,assign_task_with_ai
+
 
 router = APIRouter(
     prefix="/ai",
@@ -59,7 +59,7 @@ async def project_report(project_id: int, db: Session = Depends(get_db)):
     }
 
 
-# In your router.py
+
 @router.post("/projects/{project_id}/auto-plan", status_code=status.HTTP_201_CREATED)
 async def auto_plan_project(
     project_id: int,

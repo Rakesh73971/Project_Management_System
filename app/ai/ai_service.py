@@ -3,8 +3,8 @@ import google.generativeai as genai
 from app.config import settings
 import json
 
-genai.configure(api_key=settings.gemini_api_key)
 
+genai.configure(api_key=settings.gemini_api_key)
 
 model = genai.GenerativeModel("gemini-2.5-flash")
 
@@ -51,7 +51,6 @@ async def generate_project_tasks(project_prompt: str, available_users: str):
        - "title" (string)
        - "description" (string)
        - "priority" ("low", "medium", or "high")
-       # ---> ADD THIS NEW RULE BELOW <---
        - "reasoning" (string - briefly explain why this user's tech stack is a match BEFORE giving the ID).
        - "assigned_to" (integer - MUST be one of the IDs from the team members list above). """
     
@@ -61,7 +60,7 @@ async def generate_project_tasks(project_prompt: str, available_users: str):
             generation_config={"response_mime_type": "application/json"}
         )
         
-        # --- FIX 1: THE MARKDOWN STRIPPER ---
+        
         raw_text = response.text.strip()
         if raw_text.startswith("```json"):
             raw_text = raw_text[7:]
@@ -73,7 +72,6 @@ async def generate_project_tasks(project_prompt: str, available_users: str):
         return json.loads(raw_text.strip())
         
     except json.JSONDecodeError as e:
-        # Print the exact text so we can see why it failed parsing
         print(f"\n--- AI JSON ERROR ---\n{response.text}\n---------------------\n")
         logging.error(f"AI returned invalid JSON: {e}")
         return None
@@ -106,14 +104,14 @@ async def assign_task_with_ai(task_title: str, task_desc: str, users_context: st
             generation_config={"response_mime_type": "application/json"}
         )
         
-        # Clean markdown if present
+        
         raw_text = response.text.strip()
         if raw_text.startswith("```"):
             raw_text = raw_text.strip("```").replace("json", "", 1).strip()
         
         data = json.loads(raw_text)
         
-        # Optional: Validate with Pydantic here if you have a schema defined
+    
         return data
         
     except Exception as e:
