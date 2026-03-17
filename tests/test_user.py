@@ -10,6 +10,8 @@ def test_create_user(client):
             "name": "Rakesh",
             "email": "hello123@gmail.com",
             "password": "password123",
+            'designation':'Python Developer',
+            'tech_stack':'Python,FastAPI,Django,Postgresql,MongoDB'
         },
     )
 
