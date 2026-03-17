@@ -7,7 +7,7 @@ from .ai import ai_router
 
 app = FastAPI()
 
-models.Base.metadata.create_all(bind=engine)
+#models.Base.metadata.create_all(bind=engine)
 
 app.include_router(oauth.router)
 app.include_router(user.router)
