@@ -11,7 +11,7 @@ import pytest
 
 
 
-SQLALCHEMY_DATABASE_URL = f"postgresql://{settings.database_username}:{settings.database_password}@{settings.database_hostname}:{settings.database_port}/{settings.database_name}_test"
+SQLALCHEMY_DATABASE_URL = f"postgresql://{settings.database_username}:{settings.database_password}@{settings.database_hostname}:{settings.database_port}/{settings.database_name}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False,expire_on_commit=False)
@@ -49,6 +49,8 @@ def test_user2(client):
         "name": "Sanjeev",
         "email": "sanjeev123@gmail.com",
         "password": "password123",
+        'designation':'python developer',
+        'tech_stack':'python,FastAPI,Django,MySQL'
     }
     res = client.post("/users/", json=user_data)
 
@@ -64,6 +66,8 @@ def test_user(client):
         "name": "Rakesh",
         "email": "rakesh@gmail.com",
         "password": "password123",
+        'designation':'Java Developer',
+        'tech_stack':'java,spring,springboot,postgresql'
     }
     res = client.post("/users/", json=user_data)
     assert res.status_code == 201
@@ -84,24 +88,6 @@ def authorized_client(client,token):
         'Authorization':f'Bearer {token}'
     }
     return client
-
-@pytest.fixture
-def test_posts(test_user, test_user2, session):
-    posts_data = [
-        {"title": "first title", "content": "first content", "owner_id": test_user["id"]},
-        {"title": "2nd title", "content": "2nd content", "owner_id": test_user["id"]},
-        {"title": "3rd title", "content": "3rd content", "owner_id": test_user["id"]},
-        {"title": "other user's post", "content": "content", "owner_id": test_user2["id"]},
-    ]
-
-    posts = [models.Post(**post) for post in posts_data]
-
-    session.add_all(posts)
-    session.commit()
-
-    return session.query(models.Post).all()
-
-
 
 
 @pytest.fixture
