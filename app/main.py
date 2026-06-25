@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 from . import models
 from .database import engine
 from .routers import oauth,user,oraganization_member,organization,project,task
@@ -7,7 +8,10 @@ from .ai import ai_router
 
 app = FastAPI()
 
-#models.Base.metadata.create_all(bind=engine)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    models.Base.metadata.create_all(bind=engine)
+    yield
 
 app.include_router(oauth.router)
 app.include_router(user.router)
