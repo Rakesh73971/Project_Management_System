@@ -8,10 +8,8 @@ from .ai import ai_router
 
 app = FastAPI()
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    models.Base.metadata.create_all(bind=engine)
-    yield
+
+models.Base.metadata.create_all(bind=engine)
 
 app.include_router(oauth.router)
 app.include_router(user.router)
